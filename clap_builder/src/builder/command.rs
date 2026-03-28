@@ -110,6 +110,7 @@ pub struct Command {
     #[cfg(feature = "unstable-ext")]
     ext: Extensions,
     app_ext: Extensions,
+    renderer: Option<crate::output::ArcRenderer>,
 }
 
 /// # Basic API
@@ -910,6 +911,46 @@ impl Command {
         }
 
         self._do_parse(&mut raw_args, cursor)
+    }
+
+    /// Sets a custom [`Renderer`] for automatically generated output pages.
+    ///
+    /// When set, the renderer's [`Renderer::render_help`] method is called
+    /// instead of the built-in [`AutoHelp`] / [`HelpTemplate`] pipeline
+    /// whenever help output needs to be produced and the Renderer returns Some.
+    ///
+    /// This is the builder-style entry point. The derive-style entry point is
+    /// [`Parser::parse_with_renderer`][crate::Parser::parse_with_renderer].
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use clap_builder as clap;
+    /// use clap::{Command, Renderer, builder::StyledStr};
+    ///
+    /// struct MyRenderer;
+    /// impl Renderer for MyRenderer {
+    ///     fn render_help(&self, cmd: &Command, _use_long: bool) -> Option<StyledStr> {
+    ///         let mut out = StyledStr::new();
+    ///         out.push_str(&format!("Custom help for `{}`\n", cmd.get_name()));
+    ///         Some(out)
+    ///     }
+    /// }
+    ///
+    /// Command::new("my-app").with_renderer(MyRenderer);
+    /// ```
+    ///
+    /// [`AutoHelp`]: crate::output::AutoHelp
+    /// [`HelpTemplate`]: crate::output::HelpTemplate
+    #[must_use]
+    pub fn with_renderer(mut self, renderer: impl crate::output::Renderer) -> Self {
+        self.renderer = Some(crate::output::ArcRenderer::new(renderer));
+        self
+    }
+
+    /// Returns the custom [`Renderer`] set via [`Command::with_renderer`], if any.
+    pub(crate) fn get_renderer(&self) -> Option<&dyn crate::output::Renderer> {
+        self.renderer.as_deref()
     }
 
     /// Prints the short help message (`-h`) to [`io::stdout()`].
@@ -5144,6 +5185,11 @@ impl Command {
     }
 
     pub(crate) fn write_version_err(&self, use_long: bool) -> StyledStr {
+        if let Some(renderer) = self.get_renderer() {
+            if let Some(styled) = renderer.render_version(self, use_long) {
+                return styled;
+            }
+        }
         let msg = self._render_version(use_long);
         StyledStr::from(msg)
     }
@@ -5230,6 +5276,7 @@ impl Default for Command {
             #[cfg(feature = "unstable-ext")]
             ext: Default::default(),
             app_ext: Default::default(),
+            renderer: None,
         }
     }
 }

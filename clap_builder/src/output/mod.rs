@@ -1,6 +1,7 @@
 mod help;
 #[cfg(feature = "help")]
 mod help_template;
+mod renderer;
 mod usage;
 
 pub(crate) mod fmt;
@@ -8,6 +9,8 @@ pub(crate) mod fmt;
 pub(crate) mod textwrap;
 
 pub(crate) use self::help::write_help;
+pub use self::renderer::Renderer;
+pub(crate) use self::renderer::ArcRenderer;
 #[cfg(feature = "help")]
 pub(crate) use self::help_template::AutoHelp;
 #[cfg(feature = "help")]

@@ -4837,6 +4837,9 @@ impl Command {
             sc.settings = sc.settings | self.g_settings;
             sc.g_settings = sc.g_settings | self.g_settings;
             sc.app_ext.update(&self.app_ext);
+            if sc.renderer.is_none() {
+                sc.renderer = self.renderer.clone();
+            }
         }
     }
 

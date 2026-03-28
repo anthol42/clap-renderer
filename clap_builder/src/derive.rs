@@ -42,6 +42,49 @@ pub trait Parser: FromArgMatches + CommandFactory + Sized {
         }
     }
 
+    /// Parse from `std::env::args_os()` using a custom help [`Renderer`][crate::Renderer],
+    /// [exit][Error::exit] on error.
+    ///
+    /// This is equivalent to [`Parser::parse`] but installs `renderer` so that
+    /// any help output produced during parsing (or via `--help` / `-h`) is
+    /// delegated to it instead of the built-in formatter.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #[cfg(feature = "derive")] {
+    /// use clap::{Parser, Renderer, builder::StyledStr, Command};
+    ///
+    /// #[derive(Parser)]
+    /// struct Cli {
+    ///     #[arg(short)]
+    ///     verbose: bool,
+    /// }
+    ///
+    /// struct MyRenderer;
+    /// impl Renderer for MyRenderer {
+    ///     fn render_help(&self, cmd: &Command, _use_long: bool) -> Option<StyledStr> {
+    ///         let mut out = StyledStr::new();
+    ///         out.push_str(&format!("Custom help for `{}`\n", cmd.get_name()));
+    ///         Some(out)
+    ///     }
+    /// }
+    ///
+    /// // let cli = Cli::parse_with_renderer(MyRenderer);
+    /// # }
+    /// ```
+    fn parse_with_renderer(renderer: impl crate::output::Renderer) -> Self {
+        let mut matches = <Self as CommandFactory>::command()
+            .with_renderer(renderer)
+            .get_matches();
+        let res = <Self as FromArgMatches>::from_arg_matches_mut(&mut matches)
+            .map_err(format_error::<Self>);
+        match res {
+            Ok(s) => s,
+            Err(e) => e.exit(),
+        }
+    }
+
     /// Parse from `std::env::args_os()`, return Err on error.
     fn try_parse() -> Result<Self, Error> {
         let mut matches = ok!(<Self as CommandFactory>::command().try_get_matches());

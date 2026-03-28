@@ -9,7 +9,9 @@ use crate::output::Usage;
 pub(crate) fn write_help(writer: &mut StyledStr, cmd: &Command, usage: &Usage<'_>, use_long: bool) {
     debug!("write_help");
 
-    if let Some(h) = cmd.get_override_help() {
+    if let Some(styled) = cmd.get_renderer().and_then(|r| r.render_help(cmd, use_long)) {
+        writer.push_styled(&styled);
+    } else if let Some(h) = cmd.get_override_help() {
         writer.push_styled(h);
     } else {
         #[cfg(feature = "help")]

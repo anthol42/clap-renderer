@@ -30,6 +30,7 @@ pub use crate::util::color::ColorChoice;
 pub type Error = error::Error<error::DefaultFormatter>;
 
 pub use crate::derive::{Args, CommandFactory, FromArgMatches, Parser, Subcommand, ValueEnum};
+pub use crate::output::Renderer;
 
 #[macro_use]
 #[allow(missing_docs)]
